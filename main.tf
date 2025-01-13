@@ -78,8 +78,8 @@ resource "aws_s3_bucket_website_configuration" "exampleindex" {
 }
 
 
-output "bucket_url" {
-  value = "http://${aws_s3_bucket.firstbucket.website_endpoint}"
+output "bucket_url" { 
+  value = aws_s3_bucket.firstbucket.website_endpoint
 }
 
 resource "aws_ecr_repository" "my_repository" {
@@ -135,6 +135,21 @@ resource "aws_ecs_cluster" "my_cluster" {
   name = "my-cluster"
 }
 
+resource "null_resource" "git_sha" {
+  provisioner "local-exec" {
+    command = "git rev-parse --short HEAD > git_sha.txt"
+  }
+}
+
+data "local_file" "git_sha" {
+  filename = "${path.module}/git_sha.txt"
+  depends_on = [null_resource.git_sha]
+}
+
+locals {
+  git_sha = chomp(trimspace(data.local_file.git_sha.content))
+}
+
 resource "aws_apprunner_service" "my_apprunner_service" {
   service_name = "my-apprunner-service"
 
@@ -144,7 +159,7 @@ resource "aws_apprunner_service" "my_apprunner_service" {
     }
 
     image_repository {
-      image_identifier      = "${var.account_id}.dkr.ecr.${var.region}.amazonaws.com/${var.repo_name}:latest"
+      image_identifier      = "${var.account_id}.dkr.ecr.${var.region}.amazonaws.com/${var.repo_name}:${local.git_sha}"
       image_repository_type = "ECR"
       image_configuration {
         port = "80"
@@ -160,7 +175,7 @@ resource "aws_apprunner_service" "my_apprunner_service" {
 
 resource "null_resource" "docker_image" {
   provisioner "local-exec" {
-    command = "docker build -t ${var.repo_name} . && docker tag ${var.repo_name}:latest ${var.account_id}.dkr.ecr.${var.region}.amazonaws.com/${var.repo_name}:latest && docker push ${var.account_id}.dkr.ecr.${var.region}.amazonaws.com/${var.repo_name}:latest"
+    command = "docker build -t ${var.repo_name}:${local.git_sha} . && docker tag ${var.repo_name}:${local.git_sha} ${var.account_id}.dkr.ecr.${var.region}.amazonaws.com/${var.repo_name}:${local.git_sha} && docker push ${var.account_id}.dkr.ecr.${var.region}.amazonaws.com/${var.repo_name}:${local.git_sha}"
   }
   triggers = {
     always_run = "${timestamp()}"
@@ -169,5 +184,5 @@ resource "null_resource" "docker_image" {
 }
 
 output "service_url" {
-  value = "http://${aws_apprunner_service.my_apprunner_service.service_url}/"
+  value = aws_apprunner_service.my_apprunner_service.service_url
 }
