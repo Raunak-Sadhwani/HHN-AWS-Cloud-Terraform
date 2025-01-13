@@ -45,17 +45,17 @@ resource "aws_s3_bucket_policy" "public_read_policy" {
     Version = "2012-10-17"
     Statement = [
       {
-        Effect = "Allow"
+        Effect    = "Allow"
         Principal = "*"
-        Action = "s3:GetObject"
-        Resource = "${aws_s3_bucket.firstbucket.arn}/*"
+        Action    = "s3:GetObject"
+        Resource  = "${aws_s3_bucket.firstbucket.arn}/*"
       }
     ]
   })
 }
 
 data "template_file" "webapp_index" {
-  template = file("${path.module}/webapp/index.html")  # Reference to the index.html file
+  template = file("${path.module}/webapp/index.html") # Reference to the index.html file
 
   vars = {
     api_url = "https://${aws_apprunner_service.my_apprunner_service.service_url}/"
@@ -78,14 +78,14 @@ resource "aws_s3_bucket_website_configuration" "exampleindex" {
 }
 
 
-output "bucket_url" { 
+output "bucket_url" {
   value = aws_s3_bucket.firstbucket.website_endpoint
 }
 
 resource "aws_ecr_repository" "my_repository" {
-  name = var.repo_name
+  name                 = var.repo_name
   image_tag_mutability = "MUTABLE"
-  force_delete = true
+  force_delete         = true
 }
 
 resource "aws_iam_role" "app_runner_ecr_role" {
@@ -95,8 +95,8 @@ resource "aws_iam_role" "app_runner_ecr_role" {
     Version = "2012-10-17"
     Statement = [
       {
-        Action    = "sts:AssumeRole"
-        Effect    = "Allow"
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
         Principal = {
           Service = "build.apprunner.amazonaws.com"
         }
@@ -142,7 +142,7 @@ resource "null_resource" "git_sha" {
 }
 
 data "local_file" "git_sha" {
-  filename = "${path.module}/git_sha.txt"
+  filename   = "${path.module}/git_sha.txt"
   depends_on = [null_resource.git_sha]
 }
 
